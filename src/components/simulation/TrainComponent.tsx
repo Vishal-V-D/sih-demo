@@ -1,5 +1,4 @@
 import React from 'react';
-import { ArrowRight, ArrowLeft } from 'lucide-react';
 
 interface TrainComponentProps {
   id: string;
@@ -8,10 +7,15 @@ interface TrainComponentProps {
   direction: 'left' | 'right';
   platform: string;
   status: 'moving' | 'waiting' | 'boarding';
+  speed: number;
+  priority?: string;
+  route?: string;
   onClick: () => void;
 }
 
-export function TrainComponent({ id, x, y, direction, status, onClick }: TrainComponentProps) {
+export function TrainComponent({ 
+  id, x, y, direction, status, speed, priority, route, onClick 
+}: TrainComponentProps) {
   const getStatusColor = () => {
     switch (status) {
       case 'moving': return '#10B981'; // green
@@ -21,25 +25,68 @@ export function TrainComponent({ id, x, y, direction, status, onClick }: TrainCo
     }
   };
 
+  const getPriorityColor = () => {
+    switch (priority) {
+      case 'High': return '#EF4444'; // red
+      case 'Medium': return '#F59E0B'; // yellow
+      case 'Low': return '#10B981'; // green
+      default: return '#6B7280'; // gray
+    }
+  };
+
+  const getTrainLength = () => {
+    // Vary train length based on type (inferred from train number)
+    if (id.includes('951') || id.includes('952')) return 80; // Rajdhani - longer
+    if (id.includes('019') || id.includes('001') || id.includes('002')) return 70; // Shatabdi
+    return 60; // Regular express
+  };
+
+  const trainLength = getTrainLength();
+
   return (
     <g onClick={onClick} className="cursor-pointer">
       {/* Train Body */}
       <rect
         x={x}
-        y={y - 8}
-        width="60"
-        height="16"
+        y={y - 10}
+        width={trainLength}
+        height="20"
         fill={getStatusColor()}
         stroke="#1F2937"
         strokeWidth="2"
-        rx="4"
+        rx="6"
         className="hover:brightness-110 transition-all"
+      />
+      
+      {/* Train Sections (coaches) */}
+      {Array.from({ length: Math.floor(trainLength / 20) }, (_, i) => (
+        <line
+          key={i}
+          x1={x + (i + 1) * 20}
+          y1={y - 8}
+          x2={x + (i + 1) * 20}
+          y2={y + 8}
+          stroke="#1F2937"
+          strokeWidth="1"
+        />
+      ))}
+      
+      {/* Engine (front) */}
+      <rect
+        x={direction === 'right' ? x + trainLength - 15 : x}
+        y={y - 12}
+        width="15"
+        height="24"
+        fill="#374151"
+        stroke="#1F2937"
+        strokeWidth="2"
+        rx="3"
       />
       
       {/* Train Number */}
       <text
-        x={x + 30}
-        y={y + 2}
+        x={x + trainLength / 2}
+        y={y - 2}
         fill="white"
         fontSize="10"
         fontWeight="bold"
@@ -48,18 +95,29 @@ export function TrainComponent({ id, x, y, direction, status, onClick }: TrainCo
         {id}
       </text>
       
+      {/* Speed indicator */}
+      <text
+        x={x + trainLength / 2}
+        y={y + 8}
+        fill="white"
+        fontSize="8"
+        textAnchor="middle"
+      >
+        {speed > 0 ? `${speed.toFixed(1)} km/h` : 'STOP'}
+      </text>
+      
       {/* Direction Arrow */}
-      <g transform={`translate(${x + (direction === 'right' ? 65 : -10)}, ${y})`}>
+      <g transform={`translate(${x + (direction === 'right' ? trainLength + 5 : -15)}, ${y})`}>
         {direction === 'right' ? (
           <polygon
-            points="0,-4 8,0 0,4"
+            points="0,-6 12,0 0,6"
             fill={getStatusColor()}
             stroke="#1F2937"
             strokeWidth="1"
           />
         ) : (
           <polygon
-            points="0,0 -8,-4 -8,4"
+            points="0,0 -12,-6 -12,6"
             fill={getStatusColor()}
             stroke="#1F2937"
             strokeWidth="1"
@@ -67,18 +125,63 @@ export function TrainComponent({ id, x, y, direction, status, onClick }: TrainCo
         )}
       </g>
       
+      {/* Priority Indicator */}
+      <circle
+        cx={x - 8}
+        cy={y - 15}
+        r="4"
+        fill={getPriorityColor()}
+        stroke="#1F2937"
+        strokeWidth="1"
+        className={priority === 'High' ? 'animate-pulse' : ''}
+      />
+      
       {/* Status Indicator */}
       <circle
-        cx={x - 5}
+        cx={x - 8}
         cy={y}
         r="3"
         fill={getStatusColor()}
         className={status === 'waiting' ? 'animate-pulse' : ''}
       />
       
+      {/* Route indicator */}
+      {route && (
+        <text
+          x={x + trainLength / 2}
+          y={y - 18}
+          fill="#9CA3AF"
+          fontSize="8"
+          textAnchor="middle"
+        >
+          {route}
+        </text>
+      )}
+      
       {/* Wheels */}
-      <circle cx={x + 12} cy={y + 10} r="3" fill="#374151" stroke="#6B7280" strokeWidth="1" />
-      <circle cx={x + 48} cy={y + 10} r="3" fill="#374151" stroke="#6B7280" strokeWidth="1" />
+      {Array.from({ length: Math.floor(trainLength / 15) }, (_, i) => (
+        <circle 
+          key={i}
+          cx={x + 8 + i * 15} 
+          cy={y + 12} 
+          r="3" 
+          fill="#374151" 
+          stroke="#6B7280" 
+          strokeWidth="1" 
+        />
+      ))}
+      
+      {/* Pantograph (for electric trains) */}
+      {(id.includes('951') || id.includes('019')) && (
+        <line
+          x1={x + trainLength / 2}
+          y1={y - 10}
+          x2={x + trainLength / 2}
+          y2={y - 20}
+          stroke="#3B82F6"
+          strokeWidth="2"
+        />
+      )}
     </g>
   );
 }
